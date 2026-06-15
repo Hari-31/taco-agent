@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from menu import MENU, Style, Tortilla
 
 class TacoLine(BaseModel):
+    id: int = 0
     protein: str                                  
     style: Style
     tortilla: Tortilla
@@ -32,10 +33,26 @@ class TacoLine(BaseModel):
     
 class Order(BaseModel):
     lines: list[TacoLine] = Field(default_factory=list)
+    next_id: int = 1
 
     def add_line(self, line: TacoLine) -> int:
+        line.id = self.next_id
+        self.next_id += 1
         self.lines.append(line)
-        return len(self.lines) - 1          # index handle (see note below)
+        return line.id
+    
+    def find_line(self, line_id: int) -> TacoLine | None:
+        for line in self.lines:
+            if line.id == line_id:
+                return line
+        return None
+    
+    def remove_line(self, line_id: int) -> bool:
+        line = self.find_line(line_id)
+        if line is None:
+            return False
+        self.lines.remove(line)
+        return True
 
     def total(self) -> float:
         return sum(line.line_total() for line in self.lines)
@@ -43,8 +60,8 @@ class Order(BaseModel):
     def summary(self) -> str:
         if not self.lines:
             return "Order is empty."
-        rows = [f"  [{i}] {line.describe()} — ${line.line_total():.2f}"
-                for i, line in enumerate(self.lines)]
+        rows = [f"  [{line.id}] {line.describe()} — ${line.line_total():.2f}"
+                for line in self.lines]
         rows.append(f"  Total: ${self.total():.2f}")
         return "\n".join(rows)
 if __name__ == "__main__":

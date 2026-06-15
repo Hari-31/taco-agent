@@ -43,11 +43,40 @@ def build_tools(order: Order):
                 f"Order total: ${order.total():.2f}.")
 
     @tool
+    def update_quantity(line_id: int, quantity: int) -> str:
+        """Change how many of a taco line the customer wants.
+
+        line_id: the #N id of the line (see the order summary).
+        quantity: the new count. Must be 1 or more; to remove, use remove_taco.
+        """
+        line = order.find_line(line_id)
+        if line is None:
+            return f"No line #{line_id} in the order. Use get_order_summary to see ids."
+        if quantity < 1:
+            return "Quantity must be at least 1. To remove the item, use remove_taco."
+        line.quantity = quantity
+        return (f"Updated #{line_id}: {line.describe()} — ${line.line_total():.2f}. "
+                f"Order total: ${order.total():.2f}.")
+
+    @tool
+    def remove_taco(line_id: int) -> str:
+        """Remove a taco line from the order entirely.
+
+        line_id: the #N id of the line to remove (see the order summary).
+        """
+        line = order.find_line(line_id)
+        if line is None:
+            return f"No line #{line_id} in the order. Use get_order_summary to see ids."
+        desc = line.describe()
+        order.remove_line(line_id)
+        return f"Removed #{line_id} ({desc}). Order total: ${order.total():.2f}."
+    
+    @tool
     def get_order_summary() -> str:
         """Show the current order: every line item and the running total."""
         return order.summary()
 
-    return [add_taco, get_order_summary]
+    return [add_taco, update_quantity, remove_taco, get_order_summary]
 
 if __name__ == "__main__":
     order = Order()
