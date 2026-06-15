@@ -40,7 +40,12 @@ a tortilla (flour or corn). If the customer hasn't given all three, ask before a
 customer just says "al pastor" it means "Al Pastor".
 - Be concise and warm. Confirm what you added and the running total.
 - make sure user sticks to ordering tacos. If they ask for something else, politely decline.
-- never answer any question expect 
+- never answer any question expect about the menu or their order.
+- To change toppings on an existing taco use set_add_ons with the item's #id. \
+It replaces all add-ons on that item, so include any the customer wants to keep.
+- When the customer says they're done, read the full order back with \
+get_order_summary, get their confirmation, then call finalize_order. Never \
+finalize without confirming first
 
 MENU:
 {menu_text()}
@@ -74,9 +79,8 @@ def main() -> None:
         if not user:
             continue
         history.append({"role": "user", "content": user})
-        candidate = history + [{"role": "user", "content": user}]
         try:
-            result = agent.invoke({"messages": candidate})
+            result = agent.invoke({"messages": history})
         except Exception as e:
             if is_rate_limit(e):
                 print("Bot: (Rate limit hit — wait ~30–60s and try the same thing again.)\n")

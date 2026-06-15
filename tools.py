@@ -1,3 +1,4 @@
+import random
 from langchain_core.tools import tool
 from menu import MENU, Style, Tortilla
 from order import Order, TacoLine
@@ -71,12 +72,49 @@ def build_tools(order: Order):
         order.remove_line(line_id)
         return f"Removed #{line_id} ({desc}). Order total: ${order.total():.2f}."
     
+
+    @tool
+    def set_add_ons(line_id: int, add_ons: list[str]) -> str:
+        """Replace ALL add-ons on a taco line with this exact list.
+
+        line_id: the #N id of the line (see the order summary).
+        add_ons: the complete new set of add-ons, e.g. ["guacamole", "extra cheese"].
+                 Pass [] to remove all add-ons. This REPLACES the current add-ons,
+                 so include any the customer wants to keep.
+        """
+        line = order.find_line(line_id)
+        if line is None:
+            return f"No line #{line_id} in the order. Use get_order_summary to see ids."
+        clean = []
+        for name in add_ons:
+            a = MENU.find_add_on(name)
+            if a is None:
+                opts = ", ".join(ad.name for ad in MENU.add_ons)
+                return f"No add-on called {name!r}. Available: {opts}."
+            clean.append(a.name)
+        line.add_ons = clean
+        return (f"Updated #{line_id}: {line.describe()} — ${line.line_total():.2f}. "
+                f"Order total: ${order.total():.2f}.")
+    
     @tool
     def get_order_summary() -> str:
         """Show the current order: every line item and the running total."""
         return order.summary()
+    
+    @tool
+    def finalize_order() -> str:
+        """Lock in the order and produce the final confirmation. Use ONLY after the
+        customer confirms they are done and you have read the order back to them."""
+        if not order.lines:
+            return "The order is empty — nothing to finalize."
+        if order.finalized:
+            return "This order is already confirmed."
+        order.finalized = True
+        number = random.randint(1000, 9999)
+        return (f"Order #{number} confirmed!\n{order.summary()}\n"
+                f"Thanks — it will be ready soon.")
 
-    return [add_taco, update_quantity, remove_taco, get_order_summary]
+    return [add_taco, update_quantity, remove_taco, get_order_summary, set_add_ons, finalize_order]
 
 if __name__ == "__main__":
     order = Order()

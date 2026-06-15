@@ -34,6 +34,7 @@ class TacoLine(BaseModel):
 class Order(BaseModel):
     lines: list[TacoLine] = Field(default_factory=list)
     next_id: int = 1
+    finalized: bool = False
 
     def add_line(self, line: TacoLine) -> int:
         line.id = self.next_id
