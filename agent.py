@@ -8,6 +8,8 @@ from tools import build_tools
 
 load_dotenv()
 
+MODEL = "groq:llama-3.3-70b-versatile"
+
 def is_rate_limit(err) -> bool:
     """True if this looks like a 429 from any provider (Groq, Gemini, OpenAI...)."""
     code = getattr(err, "status_code", None) or getattr(err, "code", None)
@@ -58,17 +60,18 @@ def text_of(msg) -> str:
         return c
     return "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in c)
 
+def make_agent(order: Order):
+    """Build an agent wired to this order. Shared by the chat loop and the eval."""
+    return create_agent(model=MODEL, tools=build_tools(order),
+                         system_prompt=SYSTEM_PROMPT)
+
 
 def main() -> None:
     if not os.getenv("GROQ_API_KEY"):
         raise SystemExit("Set GROQ_API_KEY in a .env file first.")
 
     order = Order()
-    agent = create_agent(
-        model="groq:llama-3.3-70b-versatile",
-        tools=build_tools(order),
-        system_prompt=SYSTEM_PROMPT,
-    )
+    agent = make_agent(order)
 
     print("Taco shop is open! Type your order. ('quit' to leave)\n")
     history: list = []
