@@ -99,12 +99,6 @@ python eval.py
 
 Runs a set of scripted multi-turn orders through the real agent and checks that each one ends in the correct order state and total.
 
-## Roadmap
-
-- [ ] Containerize with Docker and deploy to AWS for a public live demo
-- [ ] Fast unit-test suite (pytest) for the core order logic, plus CI
-- [ ] Voice ordering — a speech layer that feeds the same backend, so none of the core logic changes
-- [ ] Semantic menu search with embeddings, to scale past a small menu
 
 ## About
 
