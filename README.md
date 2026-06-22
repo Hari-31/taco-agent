@@ -29,7 +29,7 @@ The system is deliberately split so the unreliable part (the language model) can
 ```mermaid
 flowchart TD
     U([You type a message]) --> A[FastAPI /chat endpoint]
-    A --> M[LLM on Groq]
+    A --> M[LLM on Gemini]
     M -->|decides to call a tool| T[Tool: add / update / remove / finalize]
     T --> O[(Order state — the source of truth)]
     O --> P[Prices read from the Menu]
