@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taco Agent</title>
+<style>
+  :root{
+    --bg:#F7F4EF; --surface:#FFFFFF; --ink:#211C18; --muted:#8A8175;
+    --salsa:#E03E36; --salsa-deep:#B22B26; --lime:#4F9E2E;
+    --ticket:#F4E9D2; --ticket-ink:#3A322A; --line:#E6DFD4;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,"Courier New",monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 40px}
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--salsa-deep);font-weight:700}
+  h1{font-size:34px;margin:0;letter-spacing:-.02em;font-weight:800}
+  .tag{color:var(--muted);font-size:15px}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+  /* chat */
+  .chat{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+        display:flex;flex-direction:column;height:560px;overflow:hidden}
+  .msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+  .bubble{max-width:80%;padding:10px 14px;border-radius:14px;font-size:15px;
+          animation:rise .18s ease}
+  .bot{align-self:flex-start;background:#F3EFE8;color:var(--ink);border-bottom-left-radius:4px}
+  .you{align-self:flex-end;background:var(--salsa);color:#fff;border-bottom-right-radius:4px}
+  .dots{align-self:flex-start;color:var(--muted);font-size:14px;font-style:italic}
+  form{display:flex;gap:10px;padding:14px;border-top:1px solid var(--line);background:var(--surface)}
+  input[type=text]{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+        font-size:15px;font-family:inherit;color:var(--ink);background:#FCFAF6}
+  input[type=text]:focus-visible{outline:2px solid var(--salsa);outline-offset:1px;border-color:transparent}
+  button{border:0;border-radius:10px;padding:0 18px;font-size:15px;font-weight:700;
+          font-family:inherit;cursor:pointer;background:var(--ink);color:#fff}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button:focus-visible{outline:2px solid var(--salsa);outline-offset:2px}
+  /* ticket */
+  .ticket{background:var(--ticket);color:var(--ticket-ink);border-radius:14px;
+          padding:20px;font-family:var(--mono);position:sticky;top:20px}
+  .ticket h2{margin:0 0 2px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;text-align:center}
+  .ticket .sub{text-align:center;font-size:11px;color:#9A8E78;margin-bottom:14px}
+  .rule{border:0;border-top:1px dashed #C9BBA0;margin:12px 0}
+  .item{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:7px 0}
+  .item .q{color:var(--salsa-deep);font-weight:700}
+  .empty{color:#A99C84;font-size:13px;text-align:center;padding:18px 0}
+  .total{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:6px}
+  .stamp{margin-top:14px;text-align:center;font-weight:700;letter-spacing:.12em;
+         color:var(--lime);border:2px solid var(--lime);border-radius:8px;padding:6px;font-size:13px;
+         transform:rotate(-3deg)}
+  .newbtn{margin-top:16px;width:100%;background:transparent;color:var(--salsa-deep);
+          border:1px solid #D8C8A8;font-weight:700;padding:10px}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}.ticket{position:static}.chat{height:460px}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Order ahead</div>
+      <h1>El Agente Taquería</h1>
+    </div>
+    <span class="tag">Tell us what you'd like — tacos, your way.</span>
+  </header>
+
+  <div class="grid">
+    <section class="chat" aria-label="Chat with the order assistant">
+      <div class="msgs" id="msgs"></div>
+      <form id="form" autocomplete="off">
+        <input type="text" id="input" placeholder="e.g. two carnitas tacos, mexican, corn"
+               aria-label="Your message">
+        <button type="submit" id="send">Send</button>
+      </form>
+    </section>
+
+    <aside class="ticket" aria-label="Your order">
+      <h2>Guest check</h2>
+      <div class="sub">El Agente Taquería</div>
+      <hr class="rule">
+      <div id="lines"><div class="empty">No items yet</div></div>
+      <hr class="rule">
+      <div class="total"><span>Total</span><span id="total">$0.00</span></div>
+      <div id="stamp"></div>
+      <button class="newbtn" id="new" type="button">Start a new order</button>
+    </aside>
+  </div>
+</div>
+
+<script>
+const msgs=document.getElementById('msgs'), linesEl=document.getElementById('lines'),
+      totalEl=document.getElementById('total'), stampEl=document.getElementById('stamp'),
+      form=document.getElementById('form'), input=document.getElementById('input'),
+      send=document.getElementById('send');
+let sessionId=null;
+
+function addBubble(text,who){
+  const d=document.createElement('div');
+  d.className='bubble '+who; d.textContent=text;
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return d;
+}
+function renderOrder(o){
+  if(!o.lines.length){ linesEl.innerHTML='<div class="empty">No items yet</div>'; }
+  else{
+    linesEl.innerHTML=o.lines.map(l=>{
+      const m=l.text.match(/^(\d+)x\s+(.*)$/);
+      const q=m?m[1]:'1', name=m?m[2]:l.text;
+      return `<div class="item"><span><span class="q">${q}×</span> ${name}</span>`+
+             `<span>$${l.price.toFixed(2)}</span></div>`;
+    }).join('');
+  }
+  totalEl.textContent='$'+o.total.toFixed(2);
+  stampEl.innerHTML=o.finalized?'<div class="stamp">Order confirmed</div>':'';
+}
+async function sendMessage(text){
+  addBubble(text,'you'); input.value=''; send.disabled=true;
+  const wait=addBubble('typing…','dots');
+  try{
+    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:text,session_id:sessionId})});
+    const data=await r.json(); sessionId=data.session_id;
+    wait.remove(); addBubble(data.reply,'bot'); renderOrder(data.order);
+  }catch(e){ wait.remove(); addBubble('Could not reach the kitchen. Is the server running?','bot'); }
+  send.disabled=false; input.focus();
+}
+form.addEventListener('submit',e=>{e.preventDefault();
+  const t=input.value.trim(); if(t) sendMessage(t);});
+document.getElementById('new').addEventListener('click',async()=>{
+  if(sessionId) await fetch('/reset',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({session_id:sessionId})});
+  sessionId=null; msgs.innerHTML='';
+  renderOrder({lines:[],total:0,finalized:false});
+  addBubble("¡Hola! What can I get started for you?",'bot'); input.focus();
+});
+addBubble("¡Hola! What can I get started for you? We've got tacos — ground beef, grilled chicken, carnitas, chorizo, al pastor and more.",'bot');
+</script>
+</body>
+</html>

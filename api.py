@@ -7,7 +7,15 @@ from pydantic import BaseModel
 from order import Order
 from agent import make_agent, is_rate_limit, text_of
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+
 app = FastAPI(title="Taco Ordering Agent")
+
+@app.get("/")
+def index():
+    """Serve the web chat page (same origin as /chat, so no CORS)."""
+    return FileResponse(Path(__file__).resolve().parent / "index.html")
 
 @dataclass
 class Session:
