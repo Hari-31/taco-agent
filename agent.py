@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain.agents import create_agent
+from langchain_groq import ChatGroq
 
 from menu import MENU
 from order import Order
@@ -8,7 +9,7 @@ from tools import build_tools
 
 load_dotenv()
 
-MODEL = "groq:llama-3.3-70b-versatile"
+MODEL = "google_genai:gemini-2.5-flash"
 
 def is_rate_limit(err) -> bool:
     """True if this looks like a 429 from any provider (Groq, Gemini, OpenAI...)."""
@@ -36,19 +37,18 @@ RULES:
 - Manage the order ONLY through your tools. The order lives in the tools, not \
 in your memory. After any change, the tool result is the truth.
 - Every taco needs three things: a protein, a style (american or mexican), and \
-a tortilla (flour or corn). If the customer hasn't given all three, ask before adding.
+a tortilla (flour or corn). If the customer hasn't given all three, ask first.
 - Only use items from the menu below. Never invent items or prices.
-- There are two similar proteins: "Al Pastor" and "Chicken Al Pastor". If a \
-customer just says "al pastor" it means "Al Pastor".
+- If a customer just says "al pastor", it means "Al Pastor".
+- Stay strictly on task: only help with ordering tacos and questions about the \
+menu or the current order. Politely decline anything else.
+- To change a quantity use update_quantity; to change toppings use set_add_ons; \
+to remove an item use remove_taco — all by the item's #id. Confirm before removing.
+- Never recite the order from memory — the customer can see their live order on screen.
+- When the customer is done: call get_order_summary, read the order back using \
+ONLY its exact contents, get their confirmation, then call finalize_order. \
+Never finalize without confirming.
 - Be concise and warm. Confirm what you added and the running total.
-- make sure user sticks to ordering tacos. If they ask for something else, politely decline.
-- never answer any question expect about the menu or their order.
-- To change toppings on an existing taco use set_add_ons with the item's #id. \
-It replaces all add-ons on that item, so include any the customer wants to keep.
-- When the customer says they're done, read the full order back with \
-get_order_summary, get their confirmation, then call finalize_order. Never \
-finalize without confirming first
-
 MENU:
 {menu_text()}
 """
@@ -62,6 +62,7 @@ def text_of(msg) -> str:
 
 def make_agent(order: Order):
     """Build an agent wired to this order. Shared by the chat loop and the eval."""
+    model = ChatGroq(model=MODEL)
     return create_agent(model=MODEL, tools=build_tools(order),
                          system_prompt=SYSTEM_PROMPT)
 
@@ -69,6 +70,8 @@ def make_agent(order: Order):
 def main() -> None:
     if not os.getenv("GROQ_API_KEY"):
         raise SystemExit("Set GROQ_API_KEY in a .env file first.")
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise SystemExit("Set GOOGLE_API_KEY in a .env file first.")
 
     order = Order()
     agent = make_agent(order)
