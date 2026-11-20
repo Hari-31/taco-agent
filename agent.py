@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain_groq import ChatGroq
 
 from menu import MENU
 from order import Order
@@ -62,14 +61,11 @@ def text_of(msg) -> str:
 
 def make_agent(order: Order):
     """Build an agent wired to this order. Shared by the chat loop and the eval."""
-    model = ChatGroq(model=MODEL)
     return create_agent(model=MODEL, tools=build_tools(order),
                          system_prompt=SYSTEM_PROMPT)
 
 
 def main() -> None:
-    if not os.getenv("GROQ_API_KEY"):
-        raise SystemExit("Set GROQ_API_KEY in a .env file first.")
     if not os.getenv("GOOGLE_API_KEY"):
         raise SystemExit("Set GOOGLE_API_KEY in a .env file first.")
 

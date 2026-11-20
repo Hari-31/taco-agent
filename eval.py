@@ -46,8 +46,8 @@ def run_case(messages: list[str]) -> Order:
 
 
 def main() -> None:
-    if not os.getenv("GROQ_API_KEY"):
-        raise SystemExit("Set GROQ_API_KEY in a .env file first.")
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise SystemExit("Set GOOGLE_API_KEY in a .env file first.")
 
     passed = 0
     for case in CASES:
