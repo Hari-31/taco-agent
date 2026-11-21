@@ -1,10 +1,10 @@
-"""Offline version of eval.py: no API key, no internet.
+"""Offline agent tests: no API key, no internet.
 
-Each case from eval.CASES is played through eval.run_case(), so it uses the
-real make_agent(), the real LangGraph agent loop, and the real tools and Order.
+Each case plays a scripted customer conversation through the real
+make_agent(), the real LangGraph agent loop, and the real tools and Order.
 Only the LLM is replaced: a scripted fake model returns the tool calls a correct
-model would make for that conversation. The checks are the same as eval.py:
-the final order.total() and the number of lines.
+model would make for that conversation. The checks assert on the final order
+state (order.total() and the number of lines), never on the model's words.
 
 Run:  python -m pytest -q
 """
@@ -17,9 +17,43 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 import agent
-import eval as taco_eval
+from order import Order
 
 _ids = itertools.count(1)
+
+CASES = [
+    {"name": "single taco",
+     "messages": ["I'd like one carnitas taco, american style, flour tortilla. That's all."],
+     "total": 4.25, "lines": 1},
+    {"name": "quantity of two",
+     "messages": ["Two grilled chicken tacos, mexican style, corn tortillas. Nothing else."],
+     "total": 8.50},
+    {"name": "taco with add-on",
+     "messages": ["One al pastor, mexican, corn, with guacamole. That's it."],
+     "total": 5.75, "lines": 1},
+    {"name": "add then remove",
+     "messages": ["One chorizo, american, flour.",
+                  "Actually remove that — I don't want anything. Yes, remove it."],
+     "total": 0.0, "lines": 0},
+    {"name": "add-on then take it off",
+     "messages": ["A carnitas taco, american, flour, with guacamole.",
+                  "On second thought, no guac on it."],
+     "total": 4.25, "lines": 1},
+    {"name": "two different tacos",
+     "messages": ["A carnitas american flour and a chorizo mexican corn. Done."],
+     "total": 8.50, "lines": 2},
+]
+
+
+def run_case(messages: list[str]) -> Order:
+    """Play a scripted conversation through a fresh agent, return the order."""
+    order = Order()
+    bot = agent.make_agent(order)
+    history: list = []
+    for msg in messages:
+        history.append({"role": "user", "content": msg})
+        history = bot.invoke({"messages": history})["messages"]
+    return order            # inspect the real state, not the model's words
 
 
 def call(name: str, **args) -> dict:
@@ -58,7 +92,7 @@ def turn(*tool_calls: dict, reply: str = "Done.") -> list[AIMessage]:
     return out
 
 
-# What a correct model does for each eval.py case, one list per user message.
+# What a correct model does for each case, one list per user message.
 SCRIPTS = {
     "single taco": [
         turn(call("add_taco", protein="carnitas", style="american", tortilla="flour")),
@@ -99,17 +133,17 @@ def use_fake_model(monkeypatch, script: list[list[AIMessage]]) -> ScriptedChatMo
     return model
 
 
-def test_every_eval_case_has_a_script():
-    assert {c["name"] for c in taco_eval.CASES} == set(SCRIPTS)
+def test_every_case_has_a_script():
+    assert {c["name"] for c in CASES} == set(SCRIPTS)
 
 
-@pytest.mark.parametrize("case", taco_eval.CASES, ids=lambda c: c["name"])
-def test_eval_case_offline(monkeypatch, case):
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c["name"])
+def test_case_offline(monkeypatch, case):
     script = SCRIPTS[case["name"]]
     assert len(script) == len(case["messages"]), "one scripted turn per user message"
     model = use_fake_model(monkeypatch, script)
 
-    order = taco_eval.run_case(case["messages"])
+    order = run_case(case["messages"])
 
     assert model.position == len(model.replies), "not every scripted reply was used"
     assert round(order.total(), 2) == pytest.approx(case["total"])
@@ -127,7 +161,7 @@ def test_agent_recovers_from_bad_tool_argument(monkeypatch):
         AIMessage(content="Added one Al Pastor."),
     ]])
 
-    order = taco_eval.run_case(["One sushi taco, mexican, corn. Or al pastor if not."])
+    order = run_case(["One sushi taco, mexican, corn. Or al pastor if not."])
 
     assert len(order.lines) == 1
     assert order.lines[0].protein == "al_pastor"

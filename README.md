@@ -45,7 +45,7 @@ flowchart TD
 | `tools.py` | The six functions the LLM is allowed to call. The only way the model can touch the order. |
 | `agent.py` | Wires the model to the tools, runs the conversation loop, handles errors. |
 | `api.py` | FastAPI service with per-session state isolation, plus the web UI. |
-| `eval.py` | Automated test harness that asserts on final order state. |
+| `tests/` | Offline tests that run scripted orders through the agent and assert on final order state. |
 
 ## Design decisions
 
@@ -59,7 +59,7 @@ These are the choices I'd want to talk through in an interview.
 
 **Model-agnostic by design.** Swapping between Anthropic, Gemini, and Groq is a one-line change, backed by a normalized error layer that detects rate limits across providers regardless of which SDK raised them. The app logic doesn't care which model is behind it.
 
-**Evals assert on state, not text.** The test harness replays scripted conversations through the live agent and checks `order.total()` directly — never the model's wording. That makes the tests robust to phrasing changes and turns "it worked when I tried it" into something repeatable.
+**Tests assert on state, not text.** The tests replay scripted conversations through the agent and check `order.total()` directly — never the model's wording. That makes the tests robust to phrasing changes and turns "it worked when I tried it" into something repeatable.
 
 **Per-session isolation for concurrency.** The web service keys each browser's order and history by a session ID, so many users can order at once without colliding.
 
@@ -93,21 +93,13 @@ Then open **http://127.0.0.1:8000** and start ordering. You can also try the age
 
 ## Testing
 
-**Offline (no API key, no internet):**
+No API key or internet needed:
 
 ```bash
 python -m pytest -q
 ```
 
-Runs every `eval.py` case through the real agent loop and tools, with Gemini replaced by a scripted fake model, and checks the same totals and line counts.
-
-**Live (needs `GOOGLE_API_KEY` and access to Gemini):**
-
-```bash
-python eval.py
-```
-
-Runs a set of scripted multi-turn orders through the real agent and checks that each one ends in the correct order state and total.
+Runs scripted multi-turn orders through the real agent loop and tools, with Gemini replaced by a scripted fake model, and checks that each one ends in the correct order state and total.
 
 
 ## About
