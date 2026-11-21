@@ -14,3 +14,4 @@ Thumbs.db
 .vscode/
 .idea/
 "@ | Out-File -Encoding utf8 .gitignore
+eval.py

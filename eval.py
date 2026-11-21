@@ -2,7 +2,7 @@
 agent, then checks the final ORDER STATE — not the model's words. Because the
 order lives in our Order object, we assert on order.total() directly.
 
-Run:  python eval.py   (needs GROQ_API_KEY, makes real API calls)
+Run:  python eval.py   (needs GOOGLE_API_KEY and internet access to Gemini)
 """
 
 import os

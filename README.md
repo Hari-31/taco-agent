@@ -65,7 +65,7 @@ These are the choices I'd want to talk through in an interview.
 
 ## Getting started
 
-Requires Python 3.10+ and a free [Gemini API key](https://aistudio.google.com/apikey).
+Requires Python 3.12 and a free [Gemini API key](https://aistudio.google.com/apikey).
 
 ```bash
 git clone https://github.com/Hari-31/taco-agent.git
@@ -92,6 +92,16 @@ uvicorn api:app --reload
 Then open **http://127.0.0.1:8000** and start ordering. You can also try the agent in the terminal with `python agent.py`.
 
 ## Testing
+
+**Offline (no API key, no internet):**
+
+```bash
+python -m pytest -q
+```
+
+Runs every `eval.py` case through the real agent loop and tools, with Gemini replaced by a scripted fake model, and checks the same totals and line counts.
+
+**Live (needs `GOOGLE_API_KEY` and access to Gemini):**
 
 ```bash
 python eval.py
